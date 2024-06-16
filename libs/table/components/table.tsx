@@ -4,7 +4,6 @@ import React, { forwardRef, useRef, useState } from 'react';
 import {
   Cell,
   RowData,
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -25,9 +24,7 @@ declare module '@tanstack/react-table' {
 
 export const Table = ({ initialData }: TableProps) => {
   const [data, setData] = useState<ModifiedPokemonType[]>([initialData]);
-  const selectRefs = useRef<(HTMLSelectElement | null)[]>([] || null);
-
-  const columnHelper = createColumnHelper<ModifiedPokemonType>();
+  const selectRefs = useRef<(StateManagedSelect | null)[]>([] || null);
 
   const columns = React.useMemo(
     () => [
@@ -78,39 +75,35 @@ export const Table = ({ initialData }: TableProps) => {
     debugTable: true,
   });
 
-  const { getHeaderGroups, getRowModel, getState, g } = table;
+  const { getHeaderGroups, getRowModel, getState } = table;
 
-  const CellSelect = forwardRef<StateManagedSelect, NameAndTitle[]>(
-    ({ options }, ref) => {
-      const [selectValue, setSelectValue] = React.useState<string | undefined>(
-        options[0]
-      );
+  const CellSelect = forwardRef<
+    StateManagedSelect,
+    { options: NameAndTitle[]; id: number }
+  >(({ options, id }, ref) => {
+    const [selectValue, setSelectValue] = React.useState(options[0]);
 
-      function handleChange(value: string) {
-        setSelectValue(value);
-      }
-
-      return (
-        <Select
-          ref={(el) => {
-            selectRefs.current = [...selectRefs.current, el];
-          }}
-          // unstyled
-          classNames={{
-            control: () => 'px-2',
-            valueContainer: () =>
-              'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
-          }}
-          styles={{
-            control: ({ border, ...provided }) => provided, // Removes `outline` from the styling
-          }}
-          value={selectValue}
-          onChange={handleChange}
-          options={options}
-        />
-      );
-    }
-  );
+    return (
+      <Select
+        id={String(id)}
+        ref={ref}
+        classNames={{
+          control: () => 'px-2',
+          valueContainer: () =>
+            'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
+        }}
+        value={selectValue}
+        onChange={(option) => {
+          setSelectValue(option);
+          if (selectRefs.current[id]) {
+            selectRefs.current[id]?.focus();
+          }
+        }}
+        options={options}
+        openMenuOnFocus={true}
+      />
+    );
+  });
 
   return (
     <div className="flex justify-center align-middle">
@@ -142,10 +135,9 @@ export const Table = ({ initialData }: TableProps) => {
                   .getVisibleCells()
                   .map(
                     (
-                      cell: Cell<ModifiedPokemonType, NameAndTitle[] | string>
+                      cell: Cell<ModifiedPokemonType, NameAndTitle[] | string>,
+                      cellIndex
                     ) => {
-                      console.log(cell.getValue());
-
                       return (
                         <td
                           key={cell.id}
@@ -156,7 +148,10 @@ export const Table = ({ initialData }: TableProps) => {
                           {Array.isArray(cell.getValue()) ? (
                             <CellSelect
                               options={cell.getValue()}
-                              ref={selectRefs}
+                              ref={(el) =>
+                                (selectRefs.current[cellIndex - 1] = el)
+                              }
+                              id={cellIndex}
                             />
                           ) : (
                             <>{cell.getValue()}</>
