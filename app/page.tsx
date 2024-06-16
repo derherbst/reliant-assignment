@@ -1,6 +1,6 @@
 import { Table } from '@/libs/table/components/table';
 import { ModifiedPokemonType, PokemonType } from '@/libs/table/types';
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import RootLayout from './layout';
 
 function formatString(inputString: string): string {
   // Replace underscores with spaces
@@ -14,16 +14,21 @@ function formatString(inputString: string): string {
 function prepareData(data: PokemonType): ModifiedPokemonType {
   return {
     pokemon: data.pokemon.map((el) => ({
-      slug: el.pokemon.name,
-      title: formatString(el.pokemon.name),
+      value: el.pokemon.name,
+      label: formatString(el.pokemon.name),
     })),
     damage_relations: Object.keys(data.damage_relations).map((el) => ({
-      slug: el,
-      title: formatString(el),
+      value: el,
+      label: formatString(el),
     })),
     moves: data.moves.map((el) => ({
-      slug: el.name,
-      title: formatString(el.name),
+      value: el.name,
+      label: formatString(el.name),
+    })),
+    name: formatString(data.name),
+    names: data.names.map((el) => ({
+      value: el.name,
+      label: el.name,
     })),
   };
 }
@@ -46,9 +51,10 @@ export default async function Page() {
   const data: PokemonType = await getData();
 
   return (
-    <>
-      <h1 className="text-2xl font-bold mb-4">Pokemon Table</h1>
-      <Table initialData={prepareData(data)} />
-    </>
+    <RootLayout>
+      <div className="bg-white h-screen">
+        <Table initialData={prepareData(data)} />
+      </div>
+    </RootLayout>
   );
 }

@@ -1,6 +1,6 @@
 {
-  "extends": ["some-other-config-you-use", "prettier"],
+  "extends": ["prettier"],
   "rules": {
-    "no-console": ["error"]
+    "no-console": ["warn"]
   }
 }

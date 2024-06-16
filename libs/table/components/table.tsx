@@ -1,17 +1,17 @@
-// components/Table.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { forwardRef, useRef, useState } from 'react';
 
 import {
-  ColumnDef,
-  ColumnHelper,
+  Cell,
   RowData,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ModifiedPokemonType } from '../types';
+import Select from 'react-select';
+import { ModifiedPokemonType, NameAndTitle } from '../types';
+import StateManagedSelect from 'react-select';
 
 interface TableProps {
   initialData: ModifiedPokemonType;
@@ -23,45 +23,22 @@ declare module '@tanstack/react-table' {
   }
 }
 
-const defaultColumn: Partial<ColumnDef<ModifiedPokemonType>> = {
-  cell: ({ getValue, row: { index }, column: { id }, table }) => {
-    const initialValue = getValue();
-    const [value, setValue] = React.useState(initialValue);
-
-    const onBlur = () => {
-      table.options.meta?.updateData(index, id, value);
-    };
-
-    React.useEffect(() => {
-      setValue(initialValue);
-    }, [initialValue]);
-
-    return (
-      <select
-        // value={value as string}
-        className="bg-blue-500 text-blue-950"
-      >
-        {value.map((el) => {
-          console.log('🚀 ~ {value.map ~ el:', el);
-          return (
-            <option key={el} value={el.slug}>
-              {el.title}
-            </option>
-          );
-        })}
-      </select>
-    );
-  },
-};
-
 export const Table = ({ initialData }: TableProps) => {
   const [data, setData] = useState<ModifiedPokemonType[]>([initialData]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const selectRefs = useRef<(HTMLSelectElement | null)[]>([] || null);
 
   const columnHelper = createColumnHelper<ModifiedPokemonType>();
 
-  const columns = React.useMemo<ColumnDef<ModifiedPokemonType>[]>(
+  const columns = React.useMemo(
     () => [
+      {
+        accessorKey: 'name',
+        header: 'Type',
+      },
+      {
+        accessorKey: 'names',
+        header: 'Translations',
+      },
       {
         accessorKey: 'pokemon',
         header: 'Pokemon',
@@ -78,10 +55,9 @@ export const Table = ({ initialData }: TableProps) => {
     []
   );
 
-  const table = useReactTable<ModifiedPokemonType>({
+  const table = useReactTable({
     data,
     columns,
-    defaultColumn,
     getCoreRowModel: getCoreRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: unknown) => {
@@ -98,21 +74,54 @@ export const Table = ({ initialData }: TableProps) => {
         );
       },
     },
+    enableColumnResizing: true,
     debugTable: true,
   });
 
-  const { getHeaderGroups, getRowModel } = table;
+  const { getHeaderGroups, getRowModel, getState, g } = table;
+
+  const CellSelect = forwardRef<StateManagedSelect, NameAndTitle[]>(
+    ({ options }, ref) => {
+      const [selectValue, setSelectValue] = React.useState<string | undefined>(
+        options[0]
+      );
+
+      function handleChange(value: string) {
+        setSelectValue(value);
+      }
+
+      return (
+        <Select
+          ref={(el) => {
+            selectRefs.current = [...selectRefs.current, el];
+          }}
+          // unstyled
+          classNames={{
+            control: () => 'px-2',
+            valueContainer: () =>
+              'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
+          }}
+          styles={{
+            control: ({ border, ...provided }) => provided, // Removes `outline` from the styling
+          }}
+          value={selectValue}
+          onChange={handleChange}
+          options={options}
+        />
+      );
+    }
+  );
 
   return (
-    <div className="overflow-x-auto flex justify-center">
-      <table className="min-w-full bg-white border border-gray-200">
+    <div className="flex justify-center align-middle">
+      <table className="bg-white outline outline-2 rounded-sm outline-teal-800 mt-12 overflow-x-hidden">
         <thead>
           {getHeaderGroups().map((headerGroup, index) => (
             <tr key={index} className="bg-gray-50">
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-4 py-2 text-left text-sm font-medium text-gray-900"
+                  className="w-64 px-4 py-2 text-left text-sm font-medium text-gray-900 border-l-2 border-solid border-gray-300 first:border-none"
                 >
                   {header.isPlaceholder
                     ? null
@@ -129,24 +138,33 @@ export const Table = ({ initialData }: TableProps) => {
           {getRowModel().rows.map((row, rowIndex) => {
             return (
               <tr key={row.id} className="border-t">
-                {row.getVisibleCells().map((cell) => {
-                  return (
-                    <td
-                      key={cell.id}
-                      className={` text-orange-600 ${
-                        cell.column.id === 'active' &&
-                        data[rowIndex].moves.length > 1
-                          ? 'bg-yellow-50'
-                          : ''
-                      }`}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  );
-                })}
+                {row
+                  .getVisibleCells()
+                  .map(
+                    (
+                      cell: Cell<ModifiedPokemonType, NameAndTitle[] | string>
+                    ) => {
+                      console.log(cell.getValue());
+
+                      return (
+                        <td
+                          key={cell.id}
+                          className={` text-gray-900 border-l-2 border-solid border-gray-300 first:border-none ${
+                            !Array.isArray(cell.getValue()) && 'px-4'
+                          }`}
+                        >
+                          {Array.isArray(cell.getValue()) ? (
+                            <CellSelect
+                              options={cell.getValue()}
+                              ref={selectRefs}
+                            />
+                          ) : (
+                            <>{cell.getValue()}</>
+                          )}
+                        </td>
+                      );
+                    }
+                  )}
               </tr>
             );
           })}
