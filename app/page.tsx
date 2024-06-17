@@ -11,7 +11,7 @@ export default async function Page() {
     <RootLayout>
       <div className="bg-white h-screen">
         <Table
-          initialData={prepareDataSelect(data)}
+          initialFirstRowData={prepareDataSelect(data)}
           initialTableData={makeRestData(data)}
         />
       </div>

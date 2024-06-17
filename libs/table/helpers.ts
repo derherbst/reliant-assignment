@@ -9,8 +9,10 @@ function _formatString(inputString: string): string {
   return formattedString;
 }
 
+// prepare data only for the first row where we have selects
 export function prepareDataSelect(data: PokemonType): ModifiedPokemonType {
   return {
+    name: _formatString(data.name),
     pokemon: data.pokemon.map((el) => ({
       value: el.pokemon.name,
       label: _formatString(el.pokemon.name),
@@ -23,7 +25,6 @@ export function prepareDataSelect(data: PokemonType): ModifiedPokemonType {
       value: el.name,
       label: _formatString(el.name),
     })),
-    name: _formatString(data.name),
     names: data.names.map((el) => ({
       value: el.name,
       label: el.name,
@@ -31,17 +32,18 @@ export function prepareDataSelect(data: PokemonType): ModifiedPokemonType {
   };
 }
 
+// prepare data for the rest of the rows
 export const makeRestData = (data: PokemonType) => {
   return Array(6)
     .fill({})
     .map((_, idx) => {
       return {
+        name: _formatString(data.name),
         pokemon: _formatString(data.pokemon[idx].pokemon.name),
         damage_relations: _formatString(
           Object.keys(data.damage_relations)[idx]
         ),
         moves: _formatString(data.moves[idx].name),
-        name: _formatString(data.name),
         names: _formatString(data.names[idx].name),
       };
     });

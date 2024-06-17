@@ -11,21 +11,17 @@ import Select, { SelectInstance } from 'react-select';
 import { ModifiedPokemonType, NameAndTitle } from '../types';
 
 interface TableProps {
-  initialData: ModifiedPokemonType;
+  initialFirstRowData: ModifiedPokemonType;
   initialTableData: ModifiedPokemonType[];
 }
 
 const columnHelper = createColumnHelper<ModifiedPokemonType>();
 
+// Columns names and sizings setting
 const columns = [
   columnHelper.accessor('name', {
     cell: (info) => info.getValue(),
     header: 'Type',
-    size: 150,
-  }),
-  columnHelper.accessor('names', {
-    cell: (info) => info.getValue(),
-    header: 'Translations',
     size: 150,
   }),
   columnHelper.accessor('pokemon', {
@@ -41,46 +37,68 @@ const columns = [
     cell: (info) => info.getValue(),
     header: 'Move',
   }),
+  columnHelper.accessor('names', {
+    cell: (info) => info.getValue(),
+    header: 'Translations',
+    size: 150,
+  }),
 ];
 
-export const Table = ({ initialData, initialTableData }: TableProps) => {
+export const Table = ({
+  initialFirstRowData,
+  initialTableData,
+}: TableProps) => {
   const [selectsData, setSelectsData] = useState<object[]>([]);
   const [newRow, setNewRow] = useState<ModifiedPokemonType>(
     initialTableData[0]
   );
+
+  // set select ref where every select is accumulated to control every select in the table
   const selectRefs = useRef<SelectInstance<NameAndTitle>[]>([] || null);
 
   useEffect(() => {
     setSelectsData(transformDataForTable());
   }, []);
 
+  // focus on the next select
+  function focusNextSelect(id: number) {
+    if (selectRefs.current[id]) {
+      selectRefs.current[id]?.focus();
+    }
+  }
+
   const CellSelect = forwardRef<
     SelectInstance<NameAndTitle>,
-    { options: NameAndTitle[]; id: number; cellKey: string }
-  >(({ options, id, cellKey }, ref) => {
+    {
+      options: NameAndTitle[];
+      id: number;
+      cellKey: string;
+      onChooseOption: (id: number) => void;
+    }
+  >(({ options, id, cellKey, onChooseOption }, ref) => {
     const [selectValue, setSelectValue] = useState<NameAndTitle>(options[0]);
+
+    useEffect(() => {
+      setNewRow((prevData) => {
+        return {
+          ...prevData,
+          [cellKey]: selectValue!.label,
+        };
+      });
+    }, [selectValue]);
 
     return (
       <Select
         id={String(id)}
         ref={ref}
         classNames={{
-          control: () => 'px-2',
           valueContainer: () =>
             'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
         }}
         value={selectValue}
         onChange={(option) => {
-          setNewRow((prevData) => {
-            return {
-              ...prevData,
-              [cellKey]: option!.label,
-            };
-          });
           setSelectValue(option as NameAndTitle);
-          if (selectRefs.current[id]) {
-            selectRefs.current[id]?.focus();
-          }
+          onChooseOption(id);
         }}
         options={options}
         openMenuOnFocus={true}
@@ -88,16 +106,17 @@ export const Table = ({ initialData, initialTableData }: TableProps) => {
     );
   });
 
+  // transform data into cells. those cell that have multiple options are considered as select dropdowns
   function transformDataForTable() {
     let result = {};
 
-    Object.keys(initialData).forEach((el, idx) => {
-      if (Array.isArray(initialData[el])) {
+    Object.keys(initialFirstRowData).forEach((el, idx) => {
+      if (Array.isArray(initialFirstRowData[el])) {
         result = {
           ...result,
           [el]: (
             <CellSelect
-              options={initialData[el] as NameAndTitle[]}
+              options={initialFirstRowData[el] as NameAndTitle[]}
               cellKey={el}
               id={idx}
               ref={(el) => {
@@ -105,17 +124,19 @@ export const Table = ({ initialData, initialTableData }: TableProps) => {
                   selectRefs.current[idx - 1] = el;
                 }
               }}
+              onChooseOption={focusNextSelect}
             />
           ),
         };
       } else {
-        result = { ...result, [el]: initialData[el] };
+        result = { ...result, [el]: initialFirstRowData[el] };
       }
     });
 
     return [result, ...initialTableData];
   }
 
+  // table initialisation
   const table = useReactTable({
     data: selectsData as ModifiedPokemonType[],
     columns,
@@ -124,6 +145,7 @@ export const Table = ({ initialData, initialTableData }: TableProps) => {
 
   const { getHeaderGroups, getRowModel } = table;
 
+  // create new row with selected options from each select
   const duplicateRow = () => {
     setSelectsData((prevData) => [prevData[0], newRow, ...prevData.slice(1)]);
   };
