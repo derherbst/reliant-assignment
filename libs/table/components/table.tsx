@@ -1,103 +1,104 @@
 'use client';
-import React, { forwardRef, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
 
 import {
-  Cell,
-  RowData,
+  createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import Select from 'react-select';
+import Select, { SelectInstance } from 'react-select';
 import { ModifiedPokemonType, NameAndTitle } from '../types';
-import StateManagedSelect from 'react-select';
 
 interface TableProps {
-  initialData: ModifiedPokemonType;
+  initialFirstRowData: ModifiedPokemonType;
+  initialTableData: ModifiedPokemonType[];
 }
 
-declare module '@tanstack/react-table' {
-  interface TableMeta<TData extends RowData> {
-    updateData: (rowIndex: number, columnId: string, value: unknown) => void;
-  }
-}
+const columnHelper = createColumnHelper<ModifiedPokemonType>();
 
-export const Table = ({ initialData }: TableProps) => {
-  const [data, setData] = useState<ModifiedPokemonType[]>([initialData]);
-  const selectRefs = useRef<(StateManagedSelect | null)[]>([] || null);
+// Columns names and sizings setting
+const columns = [
+  columnHelper.accessor('name', {
+    cell: (info) => info.getValue(),
+    header: 'Type',
+    size: 150,
+  }),
+  columnHelper.accessor('pokemon', {
+    cell: (info) => info.getValue(),
+    header: 'Pokemon',
+  }),
+  columnHelper.accessor('damage_relations', {
+    cell: (info) => info.getValue(),
+    header: 'Damage relations',
+    size: 250,
+  }),
+  columnHelper.accessor('moves', {
+    cell: (info) => info.getValue(),
+    header: 'Move',
+  }),
+  columnHelper.accessor('names', {
+    cell: (info) => info.getValue(),
+    header: 'Translations',
+    size: 150,
+  }),
+];
 
-  const columns = React.useMemo(
-    () => [
-      {
-        accessorKey: 'name',
-        header: 'Type',
-      },
-      {
-        accessorKey: 'names',
-        header: 'Translations',
-      },
-      {
-        accessorKey: 'pokemon',
-        header: 'Pokemon',
-      },
-      {
-        accessorKey: 'moves',
-        header: 'Move',
-      },
-      {
-        accessorKey: 'damage_relations',
-        header: 'Damage relations',
-      },
-    ],
-    []
+export const Table = ({
+  initialFirstRowData,
+  initialTableData,
+}: TableProps) => {
+  const [selectsData, setSelectsData] = useState<object[]>([]);
+  const [newRow, setNewRow] = useState<ModifiedPokemonType>(
+    initialTableData[0]
   );
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    meta: {
-      updateData: (rowIndex: number, columnId: string, value: unknown) => {
-        setData((old) =>
-          old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...old[rowIndex]!,
-                [columnId]: value,
-              };
-            }
-            return row;
-          })
-        );
-      },
-    },
-    enableColumnResizing: true,
-    debugTable: true,
-  });
+  // set select ref where every select is accumulated to control every select in the table
+  const selectRefs = useRef<SelectInstance<NameAndTitle>[]>([] || null);
 
-  const { getHeaderGroups, getRowModel, getState } = table;
+  useEffect(() => {
+    setSelectsData(transformDataForTable());
+  }, []);
+
+  // focus on the next select
+  function focusNextSelect(id: number) {
+    if (selectRefs.current[id]) {
+      selectRefs.current[id]?.focus();
+    }
+  }
 
   const CellSelect = forwardRef<
-    StateManagedSelect,
-    { options: NameAndTitle[]; id: number }
-  >(({ options, id }, ref) => {
-    const [selectValue, setSelectValue] = React.useState(options[0]);
+    SelectInstance<NameAndTitle>,
+    {
+      options: NameAndTitle[];
+      id: number;
+      cellKey: string;
+      onChooseOption: (id: number) => void;
+    }
+  >(({ options, id, cellKey, onChooseOption }, ref) => {
+    const [selectValue, setSelectValue] = useState<NameAndTitle>(options[0]);
+
+    useEffect(() => {
+      setNewRow((prevData) => {
+        return {
+          ...prevData,
+          [cellKey]: selectValue!.label,
+        };
+      });
+    }, [selectValue]);
 
     return (
       <Select
         id={String(id)}
         ref={ref}
         classNames={{
-          control: () => 'px-2',
           valueContainer: () =>
             'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
         }}
         value={selectValue}
         onChange={(option) => {
-          setSelectValue(option);
-          if (selectRefs.current[id]) {
-            selectRefs.current[id]?.focus();
-          }
+          setSelectValue(option as NameAndTitle);
+          onChooseOption(id);
         }}
         options={options}
         openMenuOnFocus={true}
@@ -105,16 +106,70 @@ export const Table = ({ initialData }: TableProps) => {
     );
   });
 
+  // transform data into cells. those cell that have multiple options are considered as select dropdowns
+  function transformDataForTable() {
+    let result = {};
+
+    Object.keys(initialFirstRowData).forEach((el, idx) => {
+      if (Array.isArray(initialFirstRowData[el])) {
+        result = {
+          ...result,
+          [el]: (
+            <CellSelect
+              options={initialFirstRowData[el] as NameAndTitle[]}
+              cellKey={el}
+              id={idx}
+              ref={(el) => {
+                if (el) {
+                  selectRefs.current[idx - 1] = el;
+                }
+              }}
+              onChooseOption={focusNextSelect}
+            />
+          ),
+        };
+      } else {
+        result = { ...result, [el]: initialFirstRowData[el] };
+      }
+    });
+
+    return [result, ...initialTableData];
+  }
+
+  // table initialisation
+  const table = useReactTable({
+    data: selectsData as ModifiedPokemonType[],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const { getHeaderGroups, getRowModel } = table;
+
+  // create new row with selected options from each select
+  const duplicateRow = () => {
+    setSelectsData((prevData) => [prevData[0], newRow, ...prevData.slice(1)]);
+  };
+
   return (
-    <div className="flex justify-center align-middle">
-      <table className="bg-white outline outline-2 rounded-sm outline-teal-800 mt-12 overflow-x-hidden">
+    <div className="overflow-x-auto h-full">
+      <table
+        {...{
+          style: {
+            width: table.getCenterTotalSize(),
+          },
+        }}
+        className="bg-white outline outline-2 rounded-sm outline-teal-800 mt-12 ml-4 overflow-x-hidden"
+      >
         <thead>
           {getHeaderGroups().map((headerGroup, index) => (
-            <tr key={index} className="bg-gray-50">
+            <tr key={index} className="bg-gray-50 h-10">
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="w-64 px-4 py-2 text-left text-sm font-medium text-gray-900 border-l-2 border-solid border-gray-300 first:border-none"
+                  className="w-auto px-4 py-2 text-left text-sm font-medium text-gray-900 border-l-2 border-solid border-gray-300 first:border-none"
+                  style={{
+                    width: header.getSize(),
+                  }}
                 >
                   {header.isPlaceholder
                     ? null
@@ -130,36 +185,26 @@ export const Table = ({ initialData }: TableProps) => {
         <tbody>
           {getRowModel().rows.map((row, rowIndex) => {
             return (
-              <tr key={row.id} className="border-t">
-                {row
-                  .getVisibleCells()
-                  .map(
-                    (
-                      cell: Cell<ModifiedPokemonType, NameAndTitle[] | string>,
-                      cellIndex
-                    ) => {
-                      return (
-                        <td
-                          key={cell.id}
-                          className={` text-gray-900 border-l-2 border-solid border-gray-300 first:border-none ${
-                            !Array.isArray(cell.getValue()) && 'px-4'
-                          }`}
-                        >
-                          {Array.isArray(cell.getValue()) ? (
-                            <CellSelect
-                              options={cell.getValue()}
-                              ref={(el) =>
-                                (selectRefs.current[cellIndex - 1] = el)
-                              }
-                              id={cellIndex}
-                            />
-                          ) : (
-                            <>{cell.getValue()}</>
-                          )}
-                        </td>
-                      );
-                    }
-                  )}
+              <tr key={row.id} className="border-t relative h-10">
+                {row.getVisibleCells().map((cell, cellIndex) => (
+                  <td
+                    key={cell.id}
+                    className={` text-gray-900 border-l-2 border-solid border-gray-300 first:border-none ${
+                      rowIndex !== 0 || cellIndex === 0 ? 'px-4' : 'px-0'
+                    }`}
+                  >
+                    <>{cell.getValue()}</>
+                  </td>
+                ))}
+
+                {rowIndex === 0 ? (
+                  <button
+                    onClick={duplicateRow}
+                    className="-right-8 top-1/2 transform translate-x-12 -translate-y-1/2 text-green-900 absolute py-1 px-3 border-solid border-green-900 border border-1 rounded-md hover:text-white hover:bg-green-900"
+                  >
+                    Copy
+                  </button>
+                ) : null}
               </tr>
             );
           })}
