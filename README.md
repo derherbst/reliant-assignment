@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Assignment task for Reliant
 
-## Getting Started
-
-First, run the development server:
+To run the local server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requirements
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The task was to implement a table with a data from a random API and implement some functionalities listed below:
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+- Utilise Next.js 14 with App Router for the project setup.
+- Integrate an open source table library to display data fetched from an API.
+- Fetch data from an open source API endpoint to populate the table.
+- Implement multiple value options for each cell in the table where only one value can be active at a time.
+- Highlight (indicate to the user) cells that have alternative values and enable users to view and select specific values for each cell.
+- Provide a user-friendly interface for value selection within the table cells.
+- Implement a feature where selecting a value for a cell triggers the next "unreviewed" (next cell containing alternative values) cell for the user to make a selection.
+- Optional: Add ability for the user to split the alternative cell value to its own row (duplicating all other cells except for the selected one).
 
-## Learn More
+## Details
 
-To learn more about Next.js, take a look at the following resources:
+- As an API the [PokeAPI](https://pokeapi.co/) was chosen since it is free, fast and easy to use
+- Next "under-the-hood" fetch was used to get data from an endpoint
+- Libraries:
+  - `tanstack/react-table` for the actual table
+  - `react-select` to make custom user-friendly selects
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Conclusions After Finishing the Assignment Task
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+1. **New Row Creation**
 
-## Deploy on Vercel
+   - Add more intuitive functionality for creating new rows.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Text Fields Editing**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+   - Implement text field editing as the next step.
+
+3. **Column Population**
+
+   - Provide an option to populate each column with the same value as the last entry, similar to Excel.
+
+4. **AI Correction Tips**
+
+   - Include user-friendly tips to explain AI corrections, why they occur, and how to address them.
+
+5. **Saving Table Data**
+
+   - Ensure functionality to save the table data.
+
+6. **User-Friendly States**
+   - Display user-friendly states for loading the table and show errors if there are server issues.
