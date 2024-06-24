@@ -88,21 +88,29 @@ export const Table = ({
     }, [selectValue]);
 
     return (
-      <Select
-        id={String(id)}
-        ref={ref}
-        classNames={{
-          valueContainer: () =>
-            'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
-        }}
-        value={selectValue}
-        onChange={(option) => {
-          setSelectValue(option as NameAndTitle);
-          onChooseOption(id);
-        }}
-        options={options}
-        openMenuOnFocus={true}
-      />
+      <div data-testid="select-component">
+        <label className="hidden" htmlFor={'select-component'}>
+          Select
+        </label>
+        <Select
+          id={String(id)}
+          ref={ref}
+          inputId={'select-component'}
+          classNamePrefix="list"
+          classNames={{
+            valueContainer: () =>
+              'border-none text-gray-900 text-sm rounded-lg focus:ring-none focus:border-none block w-full',
+          }}
+          openMenuOnClick={true}
+          value={selectValue}
+          onChange={(option) => {
+            setSelectValue(option as NameAndTitle);
+            onChooseOption(id);
+          }}
+          options={options}
+          openMenuOnFocus={true}
+        />
+      </div>
     );
   });
 
@@ -194,17 +202,16 @@ export const Table = ({
                     }`}
                   >
                     <>{cell.getValue()}</>
+                    {rowIndex === 0 ? (
+                      <button
+                        onClick={duplicateRow}
+                        className="-right-8 top-1/2 transform translate-x-12 -translate-y-1/2 text-green-900 absolute py-1 px-3 border-solid border-green-900 border border-1 rounded-md hover:text-white hover:bg-green-900"
+                      >
+                        Copy
+                      </button>
+                    ) : null}
                   </td>
                 ))}
-
-                {rowIndex === 0 ? (
-                  <button
-                    onClick={duplicateRow}
-                    className="-right-8 top-1/2 transform translate-x-12 -translate-y-1/2 text-green-900 absolute py-1 px-3 border-solid border-green-900 border border-1 rounded-md hover:text-white hover:bg-green-900"
-                  >
-                    Copy
-                  </button>
-                ) : null}
               </tr>
             );
           })}
